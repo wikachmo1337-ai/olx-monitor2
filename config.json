@@ -1,0 +1,18 @@
+{
+  "domain": "https://www.olx.ua",
+  "max_price": null,
+  "notify_window_minutes": 180,
+  "keep_ads": 500,
+  "min_price": {
+    "Pixel": 4000,
+    "iPhone": 10000,
+    "Samsung S": 6000,
+    "MacBook": 12000
+  },
+  "queries": [
+    "pixel", "пиксель", "піксель",
+    "iphone", "айфон",
+    "samsung s", "самсунг s", "galaxy s",
+    "macbook", "макбук"
+  ]
+}

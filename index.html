@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OLX монитор</title>
+<style>
+  :root { --bg:#fff; --fg:#111; --card:#f3f4f6; --mut:#666; --acc:#2563eb; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#111418; --fg:#eee; --card:#1c2128; --mut:#9aa4af; --acc:#60a5fa; } }
+  body { margin:0; font-family:system-ui,sans-serif; background:var(--bg); color:var(--fg); }
+  header { position:sticky; top:0; background:var(--bg); padding:12px; border-bottom:1px solid var(--card); }
+  .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  button, input { font:inherit; padding:6px 10px; border-radius:8px; border:1px solid var(--mut); background:var(--card); color:var(--fg); }
+  button.on { background:var(--acc); color:#fff; border-color:var(--acc); }
+  #list { padding:12px; display:grid; gap:10px; max-width:800px; margin:auto; }
+  .ad { display:flex; gap:10px; background:var(--card); border-radius:12px; padding:10px; }
+  .ad img { width:80px; height:80px; object-fit:cover; border-radius:8px; }
+  .ad a { color:var(--acc); font-weight:600; text-decoration:none; }
+  .meta { color:var(--mut); font-size:13px; margin-top:4px; }
+  #status { color:var(--mut); font-size:13px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="row" id="filters"></div>
+  <div class="row" style="margin-top:8px">
+    <input id="max" type="number" placeholder="Макс. цена, грн" style="width:150px">
+    <span id="status"></span>
+  </div>
+</header>
+<div id="list"></div>
+<script>
+const GROUPS = ["Все","Pixel","iPhone","Samsung S","MacBook"];
+let ads = [], group = "Все";
+const maxEl = document.getElementById("max");
+maxEl.value = localStorage.getItem("maxPrice") || "";
+maxEl.oninput = () => { localStorage.setItem("maxPrice", maxEl.value); render(); };
+
+const fl = document.getElementById("filters");
+GROUPS.forEach(g => {
+  const b = document.createElement("button");
+  b.textContent = g; if (g === group) b.className = "on";
+  b.onclick = () => { group = g; [...fl.children].forEach(c => c.className = c.textContent === g ? "on" : ""); render(); };
+  fl.appendChild(b);
+});
+
+function ago(iso) {
+  const m = Math.round((Date.now() - new Date(iso)) / 60000);
+  if (isNaN(m)) return "";
+  if (m < 60) return m + " мин назад";
+  if (m < 1440) return Math.round(m / 60) + " ч назад";
+  return Math.round(m / 1440) + " дн назад";
+}
+
+function render() {
+  const max = parseFloat(maxEl.value);
+  const list = document.getElementById("list");
+  list.textContent = "";
+  ads.filter(a => (group === "Все" || a.group === group) &&
+                  (isNaN(max) || a.price_uah == null || a.price_uah <= max))
+     .forEach(a => {
+    const d = document.createElement("div"); d.className = "ad";
+    if (a.photo) { const i = document.createElement("img"); i.src = a.photo; i.loading = "lazy"; d.appendChild(i); }
+    const c = document.createElement("div");
+    const l = document.createElement("a"); l.href = a.url; l.target = "_blank"; l.rel = "noopener"; l.textContent = a.title;
+    const m = document.createElement("div"); m.className = "meta";
+    const price = a.price != null ? a.price + " " + a.currency : "цена не указана";
+    m.textContent = `${a.group} · ${price} · ${a.city || ""} · ${ago(a.created)}`;
+    c.append(l, m); d.appendChild(c); list.appendChild(d);
+  });
+}
+
+async function load() {
+  try {
+    const r = await fetch("ads.json?t=" + Date.now(), { cache: "no-store" });
+    ads = await r.json();
+    document.getElementById("status").textContent = "Обновлено: " + new Date().toLocaleTimeString();
+    render();
+  } catch (e) { document.getElementById("status").textContent = "Ошибка загрузки"; }
+}
+load(); setInterval(load, 30000);
+</script>
+</body>
+</html>
